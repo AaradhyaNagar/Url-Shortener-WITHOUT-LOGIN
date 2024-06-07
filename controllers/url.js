@@ -1,0 +1,56 @@
+const shortid = require("shortid");
+const URL = require("../models/url");
+
+const generateNewShortURL = async (req, res) => {
+  const body = req.body;
+  const shortID = shortid();
+  try {
+    await URL.create({
+      shortId: shortID,
+      redirectURL: body.url,
+      visitHistory: [],
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const existingUrl = await URL.findOne({ redirectURL: body.url });
+      if (existingUrl) {
+        return res.render("home-page", {
+          error: `${existingUrl.shortId}`,
+        });
+      }
+    }
+  }
+  return res.render("home-page", { id: shortID });
+};
+
+const redirectToOriginalURL = async (req, res) => {
+  const shortId = req.params.shortId;
+
+  const entry = await URL.findOneAndUpdate(
+    { shortId },
+    {
+      $push: {
+        visitHistory: {
+          timestamp: Date.now(),
+        },
+      },
+    }
+  );
+
+  let finalURL = "https://" + entry.redirectURL;
+  res.redirect(finalURL);
+};
+
+const getAnalytics = async (req, res) => {
+  const shortId = req.params.shortId;
+  const result = await URL.findOne({ shortId });
+  return res.json({
+    totalClicks: result.visitHistory.length,
+    analytics: result.visitHistory,
+  });
+};
+module.exports = {
+  generateNewShortURL,
+  getAnalytics,
+  redirectToOriginalURL,
+};
