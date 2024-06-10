@@ -36,9 +36,11 @@ const redirectToOriginalURL = async (req, res) => {
       },
     }
   );
-
-  let finalURL = "https://" + entry.redirectURL;
-  res.redirect(finalURL);
+  if (entry.redirectURL.startsWith("https://")) {
+    res.redirect(entry.redirectURL);
+  } else {
+    res.redirect("https://" + entry.redirectURL);
+  }
 };
 
 const getAnalytics = async (req, res) => {
